@@ -36,149 +36,146 @@ properties([
 	 ])
 ])
 
-// TODO: use pipeline DSL
-node('lisk-core') {
-	stage('Build') {
-		checkout scm
-		nvm(getNodejsVersion()) {
-			sh 'npm ci'
-		}
-		stash name: 'build'
-	}
-	stage('Run parallel tests') {
-		parallel(
-			"Lint" : {
-				node('lisk-core') {
-					unstash 'build'
-					timestamps {
-						nvm(getNodejsVersion()) {
-							sh 'npm run lint'
-						}
-					}
+
+pipeline {
+	agent { node { label 'lisk-core' } }
+
+	stages {
+		stage('Build') {
+			steps {
+				nvm(getNodejsVersion()) {
+					sh 'npm ci'
 				}
-			},
-			"Functional HTTP GET tests" : {
-				node('lisk-core') {
-					unstash 'build'
-					startLisk()
-					ansiColor('xterm') {
-						timestamps {
-							nvm(getNodejsVersion()) {
-								if (params.JENKINS_PROFILE == 'jenkins-extensive') {
-									sh '''
-									npm test -- mocha:extensive:functional:get
-									mv logs/devnet/lisk.log lisk_get_extensive.log
-									'''
-								} else {
-									sh '''
-									npm test -- mocha:default:functional:get
-									mv logs/devnet/lisk.log lisk_get.log
-									'''
-								}
-							}
-						}
-					}
-					archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
-				}
-			},
-			"Functional HTTP POST tests" : {
-				node('lisk-core') {
-					unstash 'build'
-					startLisk()
-					ansiColor('xterm') {
-						timestamps {
-							nvm(getNodejsVersion()) {
-								if (params.JENKINS_PROFILE == 'jenkins-extensive') {
-									sh '''
-									npm test -- mocha:extensive:functional:post
-									mv logs/devnet/lisk.log lisk_post_extensive.log
-									'''
-								} else {
-									sh '''
-									npm test -- mocha:default:functional:post
-									mv logs/devnet/lisk.log lisk_post.log
-									'''
-								}
-							}
-						}
-					}
-					archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
-				}
-			},
-			"Functional WS tests" : {
-				node('lisk-core') {
-					unstash 'build'
-					startLisk()
-					ansiColor('xterm') {
-						timestamps {
-							nvm(getNodejsVersion()) {
-								if (params.JENKINS_PROFILE == 'jenkins-extensive') {
-									sh '''
-									npm test -- mocha:extensive:functional:ws
-									mv logs/devnet/lisk.log lisk_ws_extensive.log
-									'''
-								} else {
-									sh '''
-									npm test -- mocha:default:functional:ws
-									mv logs/devnet/lisk.log lisk_ws.log
-									'''
-								}
-							}
-						}
-					}
-					archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
-				}
-			},
-			"Unit tests" : {
-				node('lisk-core') {
-					unstash 'build'
-					startLisk()
-					ansiColor('xterm') {
-						timestamps {
-							nvm(getNodejsVersion()) {
-								if (params.JENKINS_PROFILE == 'jenkins-extensive') {
-									sh '''
-									npm test -- mocha:extensive:unit
-									mv logs/devnet/lisk.log lisk_unit_extensive.log
-									'''
-								} else {
-									sh '''
-									npm test -- mocha:default:unit
-									mv logs/devnet/lisk.log lisk_unit.log
-									'''
-								}
-							}
-						}
-					}
-					archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
-				}
-			},
-			"Integation tests" : {
-				node('lisk-core') {
-					unstash 'build'
-					startLisk()
-					ansiColor('xterm') {
-						timestamps {
-							nvm(getNodejsVersion()) {
-								if (params.JENKINS_PROFILE == 'jenkins-extensive') {
-									sh '''
-									npm test -- mocha:extensive:integration
-									mv logs/devnet/lisk.log lisk_integration_extensive.log
-									'''
-								} else {
-									sh '''
-									npm test -- mocha:default:integration
-									mv logs/devnet/lisk.log lisk_integration.log
-									'''
-								}
-							}
-						}
-					}
-					archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
-				}
+				stash name: 'build'
 			}
-		)
+		}
+		stage('Run parallel tests') {
+			steps {
+				parallel(
+					"Lint" : {
+						node('lisk-core') {
+							unstash 'build'
+							timestamps {
+								nvm(getNodejsVersion()) {
+									sh 'npm run lint'
+								}
+							}
+						}
+					},
+					"Functional HTTP GET tests" : {
+						node('lisk-core') {
+							unstash 'build'
+							startLisk()
+							ansiColor('xterm') {
+								timestamps {
+									nvm(getNodejsVersion()) {
+										sh '''
+										if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
+											npm test -- mocha:extensive:functional:get
+											mv logs/devnet/lisk.log lisk_get_extensive.log
+										else
+											npm test -- mocha:default:functional:get
+											mv logs/devnet/lisk.log lisk_get.log
+										fi
+										'''
+									}
+								}
+							}
+							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+						}
+					},
+					"Functional HTTP POST tests" : {
+						node('lisk-core') {
+							unstash 'build'
+							startLisk()
+							ansiColor('xterm') {
+								timestamps {
+									nvm(getNodejsVersion()) {
+										sh '''
+										if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
+											npm test -- mocha:extensive:functional:post
+											mv logs/devnet/lisk.log lisk_post_extensive.log
+										else
+											npm test -- mocha:default:functional:post
+											mv logs/devnet/lisk.log lisk_post.log
+										fi
+										'''
+									}
+								}
+							}
+							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+						}
+					},
+					"Functional WS tests" : {
+						node('lisk-core') {
+							unstash 'build'
+							startLisk()
+							ansiColor('xterm') {
+								timestamps {
+									nvm(getNodejsVersion()) {
+										sh '''
+										if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
+											npm test -- mocha:extensive:functional:ws
+											mv logs/devnet/lisk.log lisk_ws_extensive.log
+										else
+											npm test -- mocha:default:functional:ws
+											mv logs/devnet/lisk.log lisk_ws.log
+										fi
+										'''
+									}
+								}
+							}
+							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+						}
+					},
+					"Unit tests" : {
+						node('lisk-core') {
+							unstash 'build'
+							startLisk()
+							ansiColor('xterm') {
+								timestamps {
+									nvm(getNodejsVersion()) {
+										sh '''
+										if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
+											npm test -- mocha:extensive:unit
+											mv logs/devnet/lisk.log lisk_unit_extensive.log
+										else
+											npm test -- mocha:default:unit
+											mv logs/devnet/lisk.log lisk_unit.log
+										fi
+										'''
+									}
+								}
+							}
+							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+						}
+					},
+					"Integation tests" : {
+						node('lisk-core') {
+							unstash 'build'
+							startLisk()
+							ansiColor('xterm') {
+								timestamps {
+									nvm(getNodejsVersion()) {
+										sh '''
+										if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
+											npm test -- mocha:extensive:integration
+											mv logs/devnet/lisk.log lisk_integration_extensive.log
+										else
+											npm test -- mocha:default:integration
+											mv logs/devnet/lisk.log lisk_integration.log
+										fi
+										'''
+									}
+								}
+							}
+							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+						}
+					}
+				)
+			}
+		}
+		// TODO: coverage
 	}
-	// TODO: coverage
 	// TODO: slack notification on failure
 }
