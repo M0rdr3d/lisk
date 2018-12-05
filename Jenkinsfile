@@ -14,17 +14,13 @@
 
 @Library('lisk-jenkins') _
 
-// TODO: merge into startLisk
-def initializeNode() {
-	sh '''
-	dropdb --if-exists lisk_dev
-	createdb lisk_dev
-	'''
-}
-
 def startLisk() {
 	nvm(getNodejsVersion()) {
-		sh 'NODE_ENV=test JENKINS_NODE_COOKIE=dontKillMe nohup node app.js &> .app.log &'
+		sh '''
+		dropdb --if-exists lisk_dev
+		createdb lisk_dev
+		NODE_ENV=test JENKINS_NODE_COOKIE=dontKillMe nohup node app.js &> .app.log &
+		'''
 	}
 	// TODO: use waitUntil instead
 	sleep time: 15
@@ -40,6 +36,7 @@ properties([
 	 ])
 ])
 
+// TODO: use pipeline DSL
 node('lisk-core') {
 	stage('Build') {
 		checkout scm
@@ -63,7 +60,6 @@ node('lisk-core') {
 			"Functional HTTP GET tests" : {
 				node('lisk-core') {
 					unstash 'build'
-					initializeNode()
 					startLisk()
 					ansiColor('xterm') {
 						timestamps {
@@ -88,7 +84,6 @@ node('lisk-core') {
 			"Functional HTTP POST tests" : {
 				node('lisk-core') {
 					unstash 'build'
-					initializeNode()
 					startLisk()
 					ansiColor('xterm') {
 						timestamps {
@@ -113,7 +108,6 @@ node('lisk-core') {
 			"Functional WS tests" : {
 				node('lisk-core') {
 					unstash 'build'
-					initializeNode()
 					startLisk()
 					ansiColor('xterm') {
 						timestamps {
@@ -138,7 +132,6 @@ node('lisk-core') {
 			"Unit tests" : {
 				node('lisk-core') {
 					unstash 'build'
-					initializeNode()
 					startLisk()
 					ansiColor('xterm') {
 						timestamps {
@@ -163,7 +156,6 @@ node('lisk-core') {
 			"Integation tests" : {
 				node('lisk-core') {
 					unstash 'build'
-					initializeNode()
 					startLisk()
 					ansiColor('xterm') {
 						timestamps {
@@ -188,4 +180,5 @@ node('lisk-core') {
 		)
 	}
 	// TODO: coverage
+	// TODO: slack notification on failure
 }
