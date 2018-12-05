@@ -17,9 +17,10 @@
 def startLisk() {
 	nvm(getNodejsVersion()) {
 		sh '''
+		killall node || true
 		dropdb --if-exists lisk_dev
 		createdb lisk_dev
-		NODE_ENV=test JENKINS_NODE_COOKIE=dontKillMe nohup node app.js &> .app.log &
+		NODE_ENV=test node app.js &>.app.log &
 		'''
 	}
 	// TODO: use waitUntil instead
@@ -46,6 +47,7 @@ pipeline {
 				nvm(getNodejsVersion()) {
 					sh 'npm ci'
 				}
+				// TODO: stash only node_modules
 				stash name: 'build'
 			}
 		}
@@ -77,6 +79,7 @@ pipeline {
 											npm test -- mocha:default:functional:get
 											mv logs/devnet/lisk.log lisk_get.log
 										fi
+										killall node || true
 										'''
 									}
 								}
@@ -99,6 +102,7 @@ pipeline {
 											npm test -- mocha:default:functional:post
 											mv logs/devnet/lisk.log lisk_post.log
 										fi
+										killall node || true
 										'''
 									}
 								}
@@ -121,6 +125,7 @@ pipeline {
 											npm test -- mocha:default:functional:ws
 											mv logs/devnet/lisk.log lisk_ws.log
 										fi
+										killall node || true
 										'''
 									}
 								}
@@ -143,6 +148,7 @@ pipeline {
 											npm test -- mocha:default:unit
 											mv logs/devnet/lisk.log lisk_unit.log
 										fi
+										killall node || true
 										'''
 									}
 								}
@@ -165,6 +171,7 @@ pipeline {
 											npm test -- mocha:default:integration
 											mv logs/devnet/lisk.log lisk_integration.log
 										fi
+										killall node || true
 										'''
 									}
 								}
