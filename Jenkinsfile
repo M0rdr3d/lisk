@@ -109,7 +109,83 @@ node('lisk-core') {
 					}
 					archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
 				}
+			},
+			"Functional WS tests" : {
+				node('lisk-core') {
+					unstash 'build'
+					initializeNode()
+					startLisk()
+					ansiColor('xterm') {
+						timestamps {
+							nvm(getNodejsVersion()) {
+								if (params.JENKINS_PROFILE == 'jenkins-extensive') {
+									sh '''
+									npm test -- mocha:extensive:functional:ws
+									mv logs/devnet/lisk.log lisk_ws_extensive.log
+									'''
+								} else {
+									sh '''
+									npm test -- mocha:default:functional:ws
+									mv logs/devnet/lisk.log lisk_ws.log
+									'''
+								}
+							}
+						}
+					}
+					archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+				}
+			},
+			"Unit tests" : {
+				node('lisk-core') {
+					unstash 'build'
+					initializeNode()
+					startLisk()
+					ansiColor('xterm') {
+						timestamps {
+							nvm(getNodejsVersion()) {
+								if (params.JENKINS_PROFILE == 'jenkins-extensive') {
+									sh '''
+									npm test -- mocha:extensive:unit
+									mv logs/devnet/lisk.log lisk_unit_extensive.log
+									'''
+								} else {
+									sh '''
+									npm test -- mocha:default:unit
+									mv logs/devnet/lisk.log lisk_unit.log
+									'''
+								}
+							}
+						}
+					}
+					archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+				}
+			},
+			"Integation tests" : {
+				node('lisk-core') {
+					unstash 'build'
+					initializeNode()
+					startLisk()
+					ansiColor('xterm') {
+						timestamps {
+							nvm(getNodejsVersion()) {
+								if (params.JENKINS_PROFILE == 'jenkins-extensive') {
+									sh '''
+									npm test -- mocha:extensive:integration
+									mv logs/devnet/lisk.log lisk_integration_extensive.log
+									'''
+								} else {
+									sh '''
+									npm test -- mocha:default:integration
+									mv logs/devnet/lisk.log lisk_integration.log
+									'''
+								}
+							}
+						}
+					}
+					archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+				}
 			}
-		) // End parallel
+		)
 	}
+	// TODO: coverage
 }
