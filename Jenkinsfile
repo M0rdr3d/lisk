@@ -39,15 +39,10 @@ properties([
 
 pipeline {
 	agent { node { label 'lisk-core' } }
-	options {
-		skipDefaultCheckout true
-	}
 
 	stages {
 		stage('Build') {
 			steps {
-				deleteDir()
-				checkout scm
 				nvm(getNodejsVersion()) {
 					sh 'npm ci'
 				}
@@ -59,7 +54,6 @@ pipeline {
 				parallel(
 					"Lint" : {
 						node('lisk-core') {
-							deleteDir()
 							unstash 'build'
 							timestamps {
 								nvm(getNodejsVersion()) {
@@ -70,7 +64,6 @@ pipeline {
 					},
 					"Functional HTTP GET tests" : {
 						node('lisk-core') {
-							deleteDir()
 							unstash 'build'
 							startLisk()
 							ansiColor('xterm') {
@@ -93,7 +86,6 @@ pipeline {
 					},
 					"Functional HTTP POST tests" : {
 						node('lisk-core') {
-							deleteDir()
 							unstash 'build'
 							startLisk()
 							ansiColor('xterm') {
@@ -116,7 +108,6 @@ pipeline {
 					},
 					"Functional WS tests" : {
 						node('lisk-core') {
-							deleteDir()
 							unstash 'build'
 							startLisk()
 							ansiColor('xterm') {
@@ -139,7 +130,6 @@ pipeline {
 					},
 					"Unit tests" : {
 						node('lisk-core') {
-							deleteDir()
 							unstash 'build'
 							startLisk()
 							ansiColor('xterm') {
@@ -162,7 +152,6 @@ pipeline {
 					},
 					"Integation tests" : {
 						node('lisk-core') {
-							deleteDir()
 							unstash 'build'
 							startLisk()
 							ansiColor('xterm') {
