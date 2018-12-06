@@ -15,8 +15,12 @@
 @Library('lisk-jenkins') _
 
 def setup() {
+	deleteDir()
+	unstash 'build'
 	nvm(getNodejsVersion()) {
 		sh '''
+		# shouldn't hurt assuming the 'lisk-core' jenkins nodes have 1 executor
+		killall --verbose --wait node || true
 		dropdb --if-exists lisk_dev
 		createdb lisk_dev
 		NODE_ENV=test node app.js &>.app.log &
@@ -33,7 +37,15 @@ def setup() {
 }
 
 def teardown() {
-	timeout(60) {
+	nvm(getNodejsVersion()) {
+		sh '''
+		npm run cover:report
+		HOST=localhost:4000 npm run cover:fetch
+		ls -l test/.coverage-unit/*
+		ls -l test/.coverage-func.zip
+		'''
+	}
+	timeout(1) {
 		sh 'killall --verbose --wait node || true'
 	}
 	archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
@@ -78,7 +90,6 @@ pipeline {
 				stage('Functional HTTP GET tests') {
 					agent { node { label 'lisk-core' } }
 					steps {
-						unstash 'build'
 						setup()
 						ansiColor('xterm') {
 							timestamps {
@@ -108,7 +119,6 @@ pipeline {
 				stage('Functional HTTP POST tests') {
 					agent { node { label 'lisk-core' } }
 					steps {
-						unstash 'build'
 						setup()
 						ansiColor('xterm') {
 							timestamps {
@@ -135,7 +145,6 @@ pipeline {
 				stage ('Functional WS tests') {
 					agent { node { label 'lisk-core' } }
 					steps {
-						unstash 'build'
 						setup()
 						ansiColor('xterm') {
 							timestamps {
@@ -162,7 +171,6 @@ pipeline {
 				stage('Unit tests') {
 					agent { node { label 'lisk-core' } }
 					steps {
-						unstash 'build'
 						setup()
 						ansiColor('xterm') {
 							timestamps {
@@ -189,7 +197,6 @@ pipeline {
 				stage('Integation tests') {
 					agent { node { label 'lisk-core' } }
 					steps {
-						unstash 'build'
 						setup()
 						ansiColor('xterm') {
 							timeout(5) {
@@ -217,14 +224,14 @@ pipeline {
 				}
 			}
 		}
-		// TODO: coverage
+		// TODO: get mocha to produce [jx]unit file(s) and read them
+		// TODO: report coverage
 	}
 	post {
 		failure {
 			script {
 				build_info = getBuildInfo()
 				//liskSlackSend('danger', "Build ${build_info} failed (<${env.BUILD_URL}/console|console>, <${env.BUILD_URL}/changes|changes>)")
-				sh 'TODO: activate slack notification'
 			}
 		}
 	}
