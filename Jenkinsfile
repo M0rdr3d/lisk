@@ -17,7 +17,6 @@
 def startLisk() {
 	nvm(getNodejsVersion()) {
 		sh '''
-		killall node || true
 		dropdb --if-exists lisk_dev
 		createdb lisk_dev
 		NODE_ENV=test node app.js &>.app.log &
@@ -51,20 +50,20 @@ pipeline {
 				stash name: 'build'
 			}
 		}
-		stage('Run parallel tests') {
-			steps {
-				parallel(
-					"Lint" : {
+		stage('Parallel: Tests') {
+			parallel {
+				stage('Linter') {
+					steps {
 						node('lisk-core') {
 							unstash 'build'
-							timestamps {
-								nvm(getNodejsVersion()) {
-									sh 'npm run lint'
-								}
+							nvm(getNodejsVersion()) {
+								sh 'npm run lint'
 							}
 						}
-					},
-					"Functional HTTP GET tests" : {
+					}
+				}
+				stage('Functional HTTP GET tests') {
+					steps {
 						node('lisk-core') {
 							unstash 'build'
 							startLisk()
@@ -79,15 +78,21 @@ pipeline {
 											npm test -- mocha:default:functional:get
 											mv logs/devnet/lisk.log lisk_get.log
 										fi
-										killall node || true
 										'''
 									}
 								}
 							}
+						}
+					}
+					post {
+						always {
+							sh 'killall node || true'
 							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
 						}
-					},
-					"Functional HTTP POST tests" : {
+					}
+				}
+				stage('Functional HTTP POST tests') {
+					steps {
 						node('lisk-core') {
 							unstash 'build'
 							startLisk()
@@ -102,15 +107,21 @@ pipeline {
 											npm test -- mocha:default:functional:post
 											mv logs/devnet/lisk.log lisk_post.log
 										fi
-										killall node || true
 										'''
 									}
 								}
 							}
+						}
+					}
+					post {
+						always {
+							sh 'killall node || true'
 							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
 						}
-					},
-					"Functional WS tests" : {
+					}
+				}
+				stage ('Functional WS tests') {
+					steps {
 						node('lisk-core') {
 							unstash 'build'
 							startLisk()
@@ -125,15 +136,21 @@ pipeline {
 											npm test -- mocha:default:functional:ws
 											mv logs/devnet/lisk.log lisk_ws.log
 										fi
-										killall node || true
 										'''
 									}
 								}
 							}
+						}
+					}
+					post {
+						always {
+							sh 'killall node || true'
 							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
 						}
-					},
-					"Unit tests" : {
+					}
+				}
+				stage('Unit tests') {
+					steps {
 						node('lisk-core') {
 							unstash 'build'
 							startLisk()
@@ -148,15 +165,21 @@ pipeline {
 											npm test -- mocha:default:unit
 											mv logs/devnet/lisk.log lisk_unit.log
 										fi
-										killall node || true
 										'''
 									}
 								}
 							}
+						}
+					}
+					post {
+						always {
+							sh 'killall node || true'
 							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
 						}
-					},
-					"Integation tests" : {
+					}
+				}
+				stage('Integation tests') {
+					steps {
 						node('lisk-core') {
 							unstash 'build'
 							startLisk()
@@ -171,18 +194,29 @@ pipeline {
 											npm test -- mocha:default:integration
 											mv logs/devnet/lisk.log lisk_integration.log
 										fi
-										killall node || true
 										'''
 									}
 								}
 							}
+						}
+					}
+					post {
+						always {
+							sh 'killall node || true'
 							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
 						}
 					}
-				)
+				}
 			}
 		}
 		// TODO: coverage
 	}
-	// TODO: slack notification on failure
+	post {
+		failure {
+			script {
+				build_info = getBuildInfo()
+				//liskSlackSend('danger', "Build ${build_info} failed (<${env.BUILD_URL}/console|console>, <${env.BUILD_URL}/changes|changes>)")
+			}
+		}
+	}
 }
