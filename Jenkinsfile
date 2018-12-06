@@ -23,7 +23,7 @@ def setup() {
 		killall --verbose --wait node || true
 		dropdb --if-exists lisk_dev
 		createdb lisk_dev
-		NODE_ENV=test nohup node app.js &>.app.log &
+		NODE_ENV=test node app.js >.app.log 2>&1 &
 		'''
 	}
 	timeout(1) {
@@ -36,7 +36,7 @@ def setup() {
 	}
 }
 
-def teardown() {
+def teardown(test_name) {
 	nvm(getNodejsVersion()) {
 		sh '''
 		npm run cover:report
@@ -45,6 +45,8 @@ def teardown() {
 		ls -l test/.coverage-func.zip
 		'''
 	}
+	// TODO: rename
+	stash name: "coverage_${test_name}", includes: 'test/.coverage-unit/*,test/.coverage-func.zip'
 	timeout(1) {
 		sh 'killall --verbose --wait node || true'
 	}
@@ -119,7 +121,7 @@ pipeline {
 							'''
 						}
 						cleanup {
-							teardown()
+							teardown('get')
 						}
 					}
 				}
@@ -146,7 +148,7 @@ pipeline {
 					}
 					post {
 						cleanup {
-							teardown()
+							teardown('post')
 						}
 					}
 				}
@@ -173,7 +175,7 @@ pipeline {
 					}
 					post {
 						cleanup {
-							teardown()
+							teardown('ws')
 						}
 					}
 				}
@@ -200,7 +202,7 @@ pipeline {
 					}
 					post {
 						cleanup {
-							teardown()
+							teardown('unit')
 						}
 					}
 				}
@@ -229,20 +231,19 @@ pipeline {
 					}
 					post {
 						cleanup {
-							teardown()
+							teardown('integration')
 						}
 					}
 				}
 			}
 		}
-		stage('Report coverage') {
-			steps {
-				// TODO: report coverage
-				sh 'ls -l test/.coverage* || true'
-			}
-		}
 	}
 	post {
+		always {
+
+			// TODO: report coverage
+			sh 'ls -l test/.coverage* || true'
+		}
 		failure {
 			script {
 				build_info = getBuildInfo()
