@@ -23,7 +23,7 @@ def setup() {
 		killall --verbose --wait node || true
 		dropdb --if-exists lisk_dev
 		createdb lisk_dev
-		NODE_ENV=test node app.js &>.app.log &
+		NODE_ENV=test nohup node app.js &>.app.log &
 		'''
 	}
 	timeout(1) {
@@ -49,6 +49,9 @@ def teardown() {
 		sh 'killall --verbose --wait node || true'
 	}
 	archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+	archiveArtifacts artifacts: 'test_*.log', allowEmptyArchive: true
+	// TODO: get mocha to produce [jx]unit file(s) and read them
+	sh 'ls -l test-results.xml || true'
 	deleteDir()
 }
 
@@ -97,11 +100,12 @@ pipeline {
 									sh '''
 									if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
 										npm test -- mocha:extensive:functional:get
-										mv logs/devnet/lisk.log lisk_get_extensive.log
+										mv logs/devnet/lisk.log test_get_extensive.log
 									else
 										npm test -- mocha:default:functional:get
-										mv logs/devnet/lisk.log lisk_get.log
+										mv logs/devnet/lisk.log test_get.log
 									fi
+									mv .app.log lisk_get.log
 									'''
 								}
 							}
@@ -109,7 +113,10 @@ pipeline {
 					}
 					post {
 						failure {
-							sh 'curl --verbose localhost:4000/api/node/constants |jq .'
+							sh '''
+							curl --verbose localhost:4000/api/node/constants |jq .
+							cat .app.log
+							'''
 						}
 						cleanup {
 							teardown()
@@ -126,11 +133,12 @@ pipeline {
 									sh '''
 									if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
 										npm test -- mocha:extensive:functional:post
-										mv logs/devnet/lisk.log lisk_post_extensive.log
+										mv logs/devnet/lisk.log test_post_extensive.log
 									else
 										npm test -- mocha:default:functional:post
-										mv logs/devnet/lisk.log lisk_post.log
+										mv logs/devnet/lisk.log test_post.log
 									fi
+									mv .app.log lisk_post.log
 									'''
 								}
 							}
@@ -152,11 +160,12 @@ pipeline {
 									sh '''
 									if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
 										npm test -- mocha:extensive:functional:ws
-										mv logs/devnet/lisk.log lisk_ws_extensive.log
+										mv logs/devnet/lisk.log test_ws_extensive.log
 									else
 										npm test -- mocha:default:functional:ws
-										mv logs/devnet/lisk.log lisk_ws.log
+										mv logs/devnet/lisk.log test_ws.log
 									fi
+									mv .app.log lisk_ws.log
 									'''
 								}
 							}
@@ -178,11 +187,12 @@ pipeline {
 									sh '''
 									if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
 										npm test -- mocha:extensive:unit
-										mv logs/devnet/lisk.log lisk_unit_extensive.log
+										mv logs/devnet/lisk.log test_unit_extensive.log
 									else
 										npm test -- mocha:default:unit
-										mv logs/devnet/lisk.log lisk_unit.log
+										mv logs/devnet/lisk.log test_unit.log
 									fi
+									mv .app.log lisk_unit.log
 									'''
 								}
 							}
@@ -199,17 +209,18 @@ pipeline {
 					steps {
 						setup()
 						ansiColor('xterm') {
-							timeout(5) {
+							timeout(10) {
 								timestamps {
 									nvm(getNodejsVersion()) {
 										sh '''
 										if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
 											npm test -- mocha:extensive:integration
-											mv logs/devnet/lisk.log lisk_integration_extensive.log
+											mv logs/devnet/lisk.log test_integration_extensive.log
 										else
 											npm test -- mocha:default:integration
-											mv logs/devnet/lisk.log lisk_integration.log
+											mv logs/devnet/lisk.log test_integration.log
 										fi
+										mv .app.log lisk_integration.log
 										'''
 									}
 								}
