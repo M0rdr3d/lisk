@@ -14,7 +14,7 @@
 
 @Library('lisk-jenkins') _
 
-def startLisk() {
+def setup() {
 	nvm(getNodejsVersion()) {
 		sh '''
 		dropdb --if-exists lisk_dev
@@ -24,6 +24,14 @@ def startLisk() {
 	}
 	// TODO: use waitUntil instead
 	sleep time: 15
+}
+
+def teardown() {
+	timeout(60) {
+		sh 'killall --verbose --wait node || true'
+	}
+	archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+	deleteDir()
 }
 
 properties([
@@ -46,11 +54,10 @@ pipeline {
 				nvm(getNodejsVersion()) {
 					sh 'npm ci'
 				}
-				// TODO: stash only node_modules
 				stash name: 'build'
 			}
 		}
-		stage('Parallel: Tests') {
+		stage('Parallel: tests wrapper') {
 			parallel {
 				stage('Linter') {
 					steps {
@@ -66,7 +73,7 @@ pipeline {
 					steps {
 						node('lisk-core') {
 							unstash 'build'
-							startLisk()
+							setup()
 							ansiColor('xterm') {
 								timestamps {
 									nvm(getNodejsVersion()) {
@@ -86,8 +93,7 @@ pipeline {
 					}
 					post {
 						always {
-							sh 'killall node || true'
-							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+							teardown()
 						}
 					}
 				}
@@ -95,7 +101,7 @@ pipeline {
 					steps {
 						node('lisk-core') {
 							unstash 'build'
-							startLisk()
+							setup()
 							ansiColor('xterm') {
 								timestamps {
 									nvm(getNodejsVersion()) {
@@ -115,8 +121,7 @@ pipeline {
 					}
 					post {
 						always {
-							sh 'killall node || true'
-							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+							teardown()
 						}
 					}
 				}
@@ -124,7 +129,7 @@ pipeline {
 					steps {
 						node('lisk-core') {
 							unstash 'build'
-							startLisk()
+							setup()
 							ansiColor('xterm') {
 								timestamps {
 									nvm(getNodejsVersion()) {
@@ -144,8 +149,7 @@ pipeline {
 					}
 					post {
 						always {
-							sh 'killall node || true'
-							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+							teardown()
 						}
 					}
 				}
@@ -153,7 +157,7 @@ pipeline {
 					steps {
 						node('lisk-core') {
 							unstash 'build'
-							startLisk()
+							setup()
 							ansiColor('xterm') {
 								timestamps {
 									nvm(getNodejsVersion()) {
@@ -173,8 +177,7 @@ pipeline {
 					}
 					post {
 						always {
-							sh 'killall node || true'
-							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+							teardown()
 						}
 					}
 				}
@@ -182,7 +185,7 @@ pipeline {
 					steps {
 						node('lisk-core') {
 							unstash 'build'
-							startLisk()
+							setup()
 							ansiColor('xterm') {
 								timestamps {
 									nvm(getNodejsVersion()) {
@@ -202,8 +205,7 @@ pipeline {
 					}
 					post {
 						always {
-							sh 'killall node || true'
-							archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
+							teardown()
 						}
 					}
 				}
