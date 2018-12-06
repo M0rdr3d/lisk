@@ -108,11 +108,11 @@ pipeline {
 						}
 					}
 					post {
-						always {
-							teardown()
-						}
 						failure {
 							sh 'curl --verbose localhost:4000/api/node/constants |jq .'
+						}
+						cleanup {
+							teardown()
 						}
 					}
 				}
@@ -137,7 +137,7 @@ pipeline {
 						}
 					}
 					post {
-						always {
+						cleanup {
 							teardown()
 						}
 					}
@@ -163,7 +163,7 @@ pipeline {
 						}
 					}
 					post {
-						always {
+						cleanup {
 							teardown()
 						}
 					}
@@ -189,7 +189,7 @@ pipeline {
 						}
 					}
 					post {
-						always {
+						cleanup {
 							teardown()
 						}
 					}
@@ -217,15 +217,19 @@ pipeline {
 						}
 					}
 					post {
-						always {
+						cleanup {
 							teardown()
 						}
 					}
 				}
 			}
 		}
-		// TODO: get mocha to produce [jx]unit file(s) and read them
-		// TODO: report coverage
+		stage('Report coverage') {
+			steps {
+				// TODO: report coverage
+				sh 'ls -l test/.coverage* || true'
+			}
+		}
 	}
 	post {
 		failure {
