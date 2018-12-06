@@ -22,8 +22,14 @@ def setup() {
 		NODE_ENV=test node app.js &>.app.log &
 		'''
 	}
-	// TODO: use waitUntil instead
-	sleep time: 15
+	timeout(1) {
+		waitUntil {
+			script {
+				def api_available = sh script: 'curl --silent http://localhost:4000/api/node/constants >/dev/null', returnStatus: true
+				return (api_available == 0)
+			}
+		}
+	}
 }
 
 def teardown() {
@@ -93,6 +99,9 @@ pipeline {
 					post {
 						always {
 							teardown()
+						}
+						failure {
+							sh 'curl --verbose localhost:4000/api/node/constants |jq .'
 						}
 					}
 				}
@@ -183,17 +192,19 @@ pipeline {
 						unstash 'build'
 						setup()
 						ansiColor('xterm') {
-							timestamps {
-								nvm(getNodejsVersion()) {
-									sh '''
-									if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
-										npm test -- mocha:extensive:integration
-										mv logs/devnet/lisk.log lisk_integration_extensive.log
-									else
-										npm test -- mocha:default:integration
-										mv logs/devnet/lisk.log lisk_integration.log
-									fi
-									'''
+							timeout(5) {
+								timestamps {
+									nvm(getNodejsVersion()) {
+										sh '''
+										if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
+											npm test -- mocha:extensive:integration
+											mv logs/devnet/lisk.log lisk_integration_extensive.log
+										else
+											npm test -- mocha:default:integration
+											mv logs/devnet/lisk.log lisk_integration.log
+										fi
+										'''
+									}
 								}
 							}
 						}
@@ -213,6 +224,7 @@ pipeline {
 			script {
 				build_info = getBuildInfo()
 				//liskSlackSend('danger', "Build ${build_info} failed (<${env.BUILD_URL}/console|console>, <${env.BUILD_URL}/changes|changes>)")
+				sh 'TODO: activate slack notification'
 			}
 		}
 	}
