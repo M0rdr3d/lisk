@@ -41,8 +41,6 @@ def teardown(test_name) {
 		sh '''
 		npm run cover:report
 		HOST=localhost:4000 npm run cover:fetch
-		ls -l test/.coverage-unit/*
-		ls -l test/.coverage-func.zip
 		'''
 	}
 	sh """
@@ -56,21 +54,31 @@ def teardown(test_name) {
 	}
 	archiveArtifacts artifacts: 'lisk_*.log', allowEmptyArchive: true
 	archiveArtifacts artifacts: 'test_*.log', allowEmptyArchive: true
-	// TODO: get mocha to produce [jx]unit file(s) and read them
-	sh 'ls -l test-results.xml || true'
 	cleanWs()
 }
 
 def report_coverage() {
-	// TODO: fix this
-	try {
-		unstash 'coverage_post'
-		unstash 'coverage_ws'
-		unstash 'coverage_unit'
-		sh 'ls -l coverage_*/'
-		// TODO: merge files and send to coveralls
-	} catch(err) {
-		sh '/bin/true'
+	sh '''
+	rm -rf coverage
+	mkdir -p coverage
+	'''
+	dir('coverage') {
+		['get', 'post', 'ws', 'unit', 'integration'].each {
+			try {
+				unstash "coverage_${it}"
+				sh "unzip coverage_${it}/.coverage-func.zip -d coverage_${it}/func/"
+			} catch(err) {
+				println "Could not unstash ${it}. Continuing."
+			}
+		}
+		sh '''
+		find -name lcov.info |sed 's/^/-a /' |xargs lcov -o merged.lcov
+		sed -i -r -e "s#$WORKSPACE##g" merged.lcov
+		cp ~/.core_coveralls.yml .coveralls.yml
+		'''
+		nvm(getNodejsVersion()) {
+			sh '../node_modules/.bin/coveralls <merged.lcov'
+		}
 	}
 }
 
