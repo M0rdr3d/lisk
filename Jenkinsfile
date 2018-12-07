@@ -15,7 +15,7 @@
 @Library('lisk-jenkins') _
 
 def setup() {
-	deleteDir()
+	cleanWs()
 	unstash 'build'
 	nvm(getNodejsVersion()) {
 		sh '''
@@ -58,7 +58,7 @@ def teardown(test_name) {
 	archiveArtifacts artifacts: 'test_*.log', allowEmptyArchive: true
 	// TODO: get mocha to produce [jx]unit file(s) and read them
 	sh 'ls -l test-results.xml || true'
-	deleteDir()
+	cleanWs()
 }
 
 def report_coverage() {
@@ -267,6 +267,9 @@ pipeline {
 				build_info = getBuildInfo()
 				//liskSlackSend('danger', "Build ${build_info} failed (<${env.BUILD_URL}/console|console>, <${env.BUILD_URL}/changes|changes>)")
 			}
+		}
+		cleanup {
+			cleanWs()
 		}
 	}
 }
