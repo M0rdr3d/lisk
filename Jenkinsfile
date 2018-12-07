@@ -45,8 +45,12 @@ def teardown(test_name) {
 		ls -l test/.coverage-func.zip
 		'''
 	}
-	// TODO: rename
-	stash name: "coverage_${test_name}", includes: 'test/.coverage-unit/*,test/.coverage-func.zip'
+	sh """
+	rm -rf coverage_${test_name}
+	mkdir -p coverage_${test_name}
+	mv test/.coverage-unit/* test/.coverage-func.zip coverage_${test_name}/
+	"""
+	stash name: "coverage_${test_name}", includes: "coverage_${test_name}/"
 	timeout(1) {
 		sh 'killall --verbose --wait node || true'
 	}
@@ -56,6 +60,22 @@ def teardown(test_name) {
 	sh 'ls -l test-results.xml || true'
 	deleteDir()
 }
+
+def report_coverage() {
+	// TODO: fix this
+	try {
+		unstash 'coverage_get'
+		unstash 'coverage_post'
+		unstash 'coverage_ws'
+		unstash 'coverage_unit'
+		unstash 'coverage_integration'
+		sh 'ls -l coverage_*/'
+		// TODO: merge files and send to coveralls
+	} catch(err) {
+		sh '/bin/true'
+	}
+}
+
 
 properties([
 	parameters([
@@ -240,9 +260,7 @@ pipeline {
 	}
 	post {
 		always {
-
-			// TODO: report coverage
-			sh 'ls -l test/.coverage* || true'
+			report_coverage()
 		}
 		failure {
 			script {
