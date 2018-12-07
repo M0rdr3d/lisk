@@ -64,11 +64,9 @@ def teardown(test_name) {
 def report_coverage() {
 	// TODO: fix this
 	try {
-		unstash 'coverage_get'
 		unstash 'coverage_post'
 		unstash 'coverage_ws'
 		unstash 'coverage_unit'
-		unstash 'coverage_integration'
 		sh 'ls -l coverage_*/'
 		// TODO: merge files and send to coveralls
 	} catch(err) {
@@ -109,39 +107,6 @@ pipeline {
 							nvm(getNodejsVersion()) {
 								sh 'npm run lint'
 							}
-						}
-					}
-				}
-				stage('Functional HTTP GET tests') {
-					agent { node { label 'lisk-core' } }
-					steps {
-						setup()
-						ansiColor('xterm') {
-							timestamps {
-								nvm(getNodejsVersion()) {
-									sh '''
-									if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
-										npm test -- mocha:extensive:functional:get
-										mv logs/devnet/lisk.log test_get_extensive.log
-									else
-										npm test -- mocha:default:functional:get
-										mv logs/devnet/lisk.log test_get.log
-									fi
-									mv .app.log lisk_get.log
-									'''
-								}
-							}
-						}
-					}
-					post {
-						failure {
-							sh '''
-							curl --verbose localhost:4000/api/node/constants |jq .
-							cat .app.log
-							'''
-						}
-						cleanup {
-							teardown('get')
 						}
 					}
 				}
@@ -223,35 +188,6 @@ pipeline {
 					post {
 						cleanup {
 							teardown('unit')
-						}
-					}
-				}
-				stage('Integation tests') {
-					agent { node { label 'lisk-core' } }
-					steps {
-						setup()
-						ansiColor('xterm') {
-							timeout(10) {
-								timestamps {
-									nvm(getNodejsVersion()) {
-										sh '''
-										if [ "$JENKINS_PROFILE" = "jenkins-extensive" ]; then
-											npm test -- mocha:extensive:integration
-											mv logs/devnet/lisk.log test_integration_extensive.log
-										else
-											npm test -- mocha:default:integration
-											mv logs/devnet/lisk.log test_integration.log
-										fi
-										mv .app.log lisk_integration.log
-										'''
-									}
-								}
-							}
-						}
-					}
-					post {
-						cleanup {
-							teardown('integration')
 						}
 					}
 				}
